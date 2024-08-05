@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Playlist</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 10px;
+            padding: 10px;
+        }
+        .video-container {
+            padding: 10px;
+            margin: 10px;
+            background-color: #aaffaf;
+            flex-basis: 80%;
+        }
+        iframe {
+            width: 100%;
+            height: 400px;
+            border: 3px solid #000;
+        }
+        .input-container {
+            margin: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #28a745;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .table-container {
+            flex-basis: 18%;
+            margin-left: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .link {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body onload="loadVideos()">
+
+    <div class="input-container">
+        <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
+        <button onclick="addVideo()">Add Video</button>
+    </div>
+
+    <div class="container">
+        <div class="video-container" id="mainPlayer">
+            <!-- Main Video Player -->
+            <div class="video-container" id="playerContainer" style="display: none;">
+                <iframe id="mainVideo" src="" title="Main Video Player"
+                    frameborder="3" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen></iframe>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Video</th>
+                    </tr>
+                </thead>
+                <tbody id="videoList">
+                    <!-- Dynamic Video List -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080/api/videos';
+
+        function loadVideos() {
+            fetch(API_URL)
+                .then(response => response.json())
+                .then(videos => {
+                    const videoList = document.getElementById('videoList');
+                    videos.forEach(video => {
+                        addVideoToTable(video.url, video.videoId);
+                    });
+                    if (videos.length > 0) {
+                        playVideo(videos[0].videoId);
+                    }
+                });
+        }
+
+        function addVideo() {
+            var url = document.getElementById('videoUrl').value;
+            var videoId = extractVideoId(url);
+            if (videoId) {
+                const video = { url: url, videoId: videoId };
+                fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(video)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addVideoToTable(data.url, data.videoId);
+                    if (document.getElementById('mainVideo').src === "") {
+                        playVideo(data.videoId);
+                    }
+                });
+                document.getElementById('videoUrl').value = '';
+            } else {
+                alert('Invalid YouTube URL');
+            }
+        }
+
+        function addVideoToTable(url, videoId) {
+            var videoList = document.getElementById('videoList');
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            td.className = 'link';
+            td.textContent = url;
+            td.setAttribute('onclick', 'playVideo("' + videoId + '")');
+            tr.appendChild(td);
+            videoList.appendChild(tr);
+        }
+
+        function extractVideoId(url) {
+            var videoId = null;
+            if (url.includes('youtube.com')) {
+                var urlParams = new URLSearchParams(new URL(url).search);
+                videoId = urlParams.get('v');
+            } else if (url.includes('youtu.be')) {
+                videoId = url.split('/').pop();
+            }
+            return videoId;
+        }
+
+        function playVideo(videoId) {
+            var embedUrl = 'https://www.youtube.com/embed/' + videoId;
+            var mainVideo = document.getElementById('mainVideo');
+            mainVideo.src = embedUrl;
+            document.getElementById('playerContainer').style.display = 'block';
+        }
+    </script>
+
+</body>
+
+</html>
